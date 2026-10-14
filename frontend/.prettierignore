@@ -1,0 +1,10 @@
+# Artifacts
+dist
+node_modules
+generated
+coverage
+.vite
+
+# Specific files
+package-lock.json
+.env*
