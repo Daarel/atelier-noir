@@ -1,6 +1,9 @@
+import { toNodeHandler } from 'better-auth/node';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+
+import { auth } from './lib/auth.js';
 
 const app = express();
 
@@ -13,7 +16,11 @@ app.use(
     credentials: true,
   }),
 );
+
+app.all('/api/auth/{*any}', toNodeHandler(auth));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 export default app;
+
