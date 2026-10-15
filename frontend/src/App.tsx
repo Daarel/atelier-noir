@@ -1,7 +1,16 @@
-import type { FC } from 'react';
+import { RouterProvider } from 'react-router-dom';
+import { Toaster } from 'sonner';
 
-const App: FC = () => {
-  return <></>;
-};
+import { useThemeSync } from '@/hooks/use-theme-sync';
+import { router } from '@/routes';
 
-export default App;
+export default function App() {
+  useThemeSync();
+
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster position="bottom-right" richColors />
+    </>
+  );
+}
