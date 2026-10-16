@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
 
-import type { Store } from '@/types/store'
+import type { Store } from '@/types/store';
 
 type Theme = 'light' | 'dark' | 'system';
 

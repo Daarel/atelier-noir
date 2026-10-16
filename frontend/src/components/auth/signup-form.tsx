@@ -1,7 +1,6 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { cn } from 'cn';
 import { Eye, EyeClosed, GalleryVerticalEndIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -19,11 +18,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { useSocialAuth } from '@/hooks/use-social-auth';
 import { useToggle } from '@/hooks/use-toggle';
-import { signIn } from '@/lib/auth-client';
-import { type loginFormValues, loginSchema } from '@/schemas/authSchemas';
+import { type signupFormValues, signupSchema } from '@/schemas/authSchemas';
+import { signUp } from '@/services/auth-client';
+import { cn } from '@/utils/cn';
 
-export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) {
-  const [showPassword, togglePassword] = useToggle(false);
+export function SignupForm({ className, ...props }: React.ComponentProps<'div'>) {
+  const [showPassword, toggleShowPassword] = useToggle(false);
   const navigate = useNavigate();
   const { isLoading, loginWithGoogle } = useSocialAuth();
 
@@ -32,17 +32,19 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<loginFormValues>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<signupFormValues>({
+    resolver: zodResolver(signupSchema),
     defaultValues: {
+      username: '',
       email: '',
       password: '',
+      confirmPassword: '',
     },
   });
 
-  const onSubmit = async (values: loginFormValues) => {
-    await signIn.email(
-      { email: values.email, password: values.password },
+  const onSubmit = async (values: signupFormValues) => {
+    await signUp.email(
+      { name: values.username, email: values.email, password: values.password },
       {
         onSuccess: () => {
           toast.success('berhasil masuk');
@@ -70,16 +72,28 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
               </div>
               <span className="sr-only">Acme Inc.</span>
             </Link>
-            <h1 className="text-xl font-bold">Welcome to Acme Inc.</h1>
+            <h1 className="text-xl font-bold">Welcome to Atelier Noir</h1>
             {errors.root && (
               <div className="bg-destructive/10 text-destructive rounded-md p-3 text-center text-sm">
                 {errors.root.message}
               </div>
             )}
             <FieldDescription>
-              Don&apos;t have an account? <Link to="/signup">Sign up</Link>
+              Already have an account? <Link to="/login">Log In</Link>
             </FieldDescription>
           </div>
+          <Field>
+            <FieldLabel htmlFor="username">Username</FieldLabel>
+            <Input
+              id="username"
+              type="text"
+              placeholder="Type your username"
+              {...register('username')}
+            />
+            {errors.username && (
+              <p className="text-destructive text-xs">{errors.username.message}</p>
+            )}
+          </Field>
           <Field>
             <FieldLabel htmlFor="email">Email</FieldLabel>
             <Input id="email" type="email" placeholder="m@example.com" {...register('email')} />
@@ -91,12 +105,12 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
               <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Your password"
+                placeholder="Type your new password"
                 className="pr-10"
                 {...register('password')}
               />
               <Button
-                onClick={togglePassword}
+                onClick={toggleShowPassword}
                 className="absolute top-0 right-2"
                 size="icon"
                 variant="ghost"
@@ -110,8 +124,32 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
             )}
           </Field>
           <Field>
+            <FieldLabel htmlFor="confirm-password">Confirm Password</FieldLabel>
+            <div className="relative">
+              <Input
+                id="confirm-password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Retype your new password"
+                className="pr-10"
+                {...register('confirmPassword')}
+              />
+              <Button
+                onClick={toggleShowPassword}
+                className="absolute top-0 right-2"
+                size="icon"
+                variant="ghost"
+                type="button"
+              >
+                {showPassword ? <Eye size="4" /> : <EyeClosed size="4" />}
+              </Button>
+            </div>
+            {errors.confirmPassword && (
+              <p className="text-destructive text-xs">{errors.confirmPassword.message}</p>
+            )}
+          </Field>
+          <Field>
             <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? 'Logging in...' : 'login'}
+              {isSubmitting ? 'Creating...' : 'Create Account'}
             </Button>
           </Field>
           <FieldSeparator>Or</FieldSeparator>
@@ -133,12 +171,6 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
               {isLoading ? 'Sign in...' : 'Continue with Google'}
             </Button>
           </Field>
-          <FieldDescription className="text-center">
-            Forgot your password?&nbsp;
-            <Link to="/reset-password" className="underline">
-              Let&apos;s reset it
-            </Link>
-          </FieldDescription>
         </FieldGroup>
       </form>
     </div>

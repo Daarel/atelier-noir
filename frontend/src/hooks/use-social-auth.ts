@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { signIn } from '@/lib/auth-client';
+import { signIn } from '@/services/auth-client';
 
 export const useSocialAuth = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);

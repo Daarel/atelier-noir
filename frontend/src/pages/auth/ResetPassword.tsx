@@ -1,10 +1,10 @@
-import { LoginForm } from '@/components/login-form';
+import TokenReset from '@/components/auth/token-reset';
 
-export default function Login() {
+export default function ResetPassword() {
   return (
     <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
       <div className="w-full max-w-sm">
-        <LoginForm />
+        <TokenReset />
       </div>
     </div>
   );
