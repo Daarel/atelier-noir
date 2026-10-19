@@ -16,8 +16,8 @@ import {
   FieldSeparator,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { useSocialAuth } from '@/hooks/use-social-auth';
-import { useToggle } from '@/hooks/use-toggle';
+import { useSocialAuth } from '@/hooks/useSocialAuth';
+import { useToggle } from '@/hooks/useToggle';
 import { type loginFormValues, loginSchema } from '@/schemas/authSchemas';
 import { signIn } from '@/services/auth-client';
 import { cn } from '@/utils/cn';

@@ -1,4 +1,4 @@
-import TokenReset from '@/components/auth/token-reset';
+import TokenReset from '@/components/auth/TokenReset';
 
 export default function ResetPassword() {
   return (

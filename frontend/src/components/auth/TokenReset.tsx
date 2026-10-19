@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/card';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { useToggle } from '@/hooks/use-toggle';
+import { useToggle } from '@/hooks/useToggle';
 import { authClient } from '@/services/auth-client';
 
 export default function TokenReset() {
@@ -45,7 +45,7 @@ export default function TokenReset() {
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const handleSendResetEmail = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSendResetEmail = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email) return toast.error('Masukkan email kamu');
 
@@ -66,13 +66,13 @@ export default function TokenReset() {
     setStep('token');
   };
 
-  const handleVerifyToken = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleVerifyToken = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!token.trim()) return toast.error('Masukkan kode token dari email');
     setStep('password');
   };
 
-  const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleResetPassword = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (newPassword.length < 8) {
       return toast.error('Password minimal 8 karakter');
@@ -149,7 +149,6 @@ export default function TokenReset() {
         </CardHeader>
 
         <CardContent>
-          {/* Step indicators */}
           <div className="mb-6 flex items-center justify-center">
             <div className="flex w-2/3 items-center">
               <div
