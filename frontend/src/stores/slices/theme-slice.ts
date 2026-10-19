@@ -1,28 +1,15 @@
 import type { StateCreator } from 'zustand';
 
-import type { Store } from '@/types/store';
+import { INITIAL_THEME_STATE } from '@/constants';
+import type { Store } from '@/types/store.types';
+import type { ThemeSlice } from '@/types/theme.types';
 
-type Theme = 'light' | 'dark' | 'system';
-
-type ThemeState = {
-  theme: Theme;
-};
-
-type ThemeActions = {
-  setTheme: (theme: Theme) => void;
-  toggleTheme: () => void;
-};
-
-export type ThemeSlice = ThemeState & ThemeActions;
-
-const initialState: ThemeState = {
-  theme: 'light',
-};
+export type { ThemeSlice };
 
 export const createThemeSlice: StateCreator<Store, [['zustand/immer', never]], [], ThemeSlice> = (
   set,
 ) => ({
-  ...initialState,
+  ...INITIAL_THEME_STATE,
   setTheme: (theme) =>
     set((state) => {
       state.theme = theme;

@@ -1,3 +1,3 @@
-import type { ThemeSlice } from '@/stores/slices/theme-slice';
+import type { ThemeSlice } from '@/types/theme.types';
 
 export type Store = ThemeSlice;
