@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import FooterLink from '@/components/layouts/FooterLink';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FOOTER_SECTIONS } from '@/constants';
 
 const Footer: FC = () => {
   const [email, setEmail] = useState('');
@@ -14,49 +15,32 @@ const Footer: FC = () => {
       toast.error('Silakan masukkan alamat email yang valid.');
       return;
     }
-    toast.success('Terima kasih telah bergabung dengan warta Atelier Noir.');
+    toast.success('Terima kasih! Kamu sudah terdaftar untuk menerima info promo terbaru.');
     setEmail('');
   };
 
   return (
     <footer className="flex min-h-[65dvh] flex-col justify-between border-t px-14 py-16 text-xs">
       <div className="flex items-start justify-between gap-8">
+        {FOOTER_SECTIONS.map((section) => (
+          <div key={section.title} className="flex-1">
+            <h2 className="mb-6 text-xs font-semibold tracking-widest uppercase">
+              {section.title}
+            </h2>
+            <ul className="flex list-none flex-col gap-2 capitalize">
+              {section.links.map((link) => (
+                <FooterLink key={link.label} to={link.href ?? '/'}>
+                  {link.label}
+                </FooterLink>
+              ))}
+            </ul>
+          </div>
+        ))}
         <div className="flex-1">
-          <h2 className="mb-6 text-xs font-semibold tracking-widest uppercase">
-            Layanan pelanggan
-          </h2>
-          <li className="flex list-none flex-col gap-2 capitalize">
-            <FooterLink>Konsultasi pribadi</FooterLink>
-            <FooterLink>Pengiriman & pengembalian seluruh indonesia</FooterLink>
-            <FooterLink>Perawatan busana & pelestarian</FooterLink>
-            <FooterLink>Janji temu studio privat</FooterLink>
-          </li>
-        </div>
-        <div className="flex-1">
-          <h2 className="mb-6 text-xs font-semibold tracking-widest uppercase">Tentang atelier</h2>
-          <li className="flex list-none flex-col gap-2 capitalize">
-            <FooterLink>Studio Bandung & Jakarta</FooterLink>
-            <FooterLink>Pengrajin indonesia</FooterLink>
-            <FooterLink>Disiplin arsitektur</FooterLink>
-            <FooterLink>Siaran pers & publikasi</FooterLink>
-          </li>
-        </div>
-        <div className="flex-1">
-          <h2 className="mb-6 text-xs font-semibold tracking-widest uppercase">
-            Keberlanjutan & warisan
-          </h2>
-          <li className="flex list-none flex-col gap-2 capitalize">
-            <FooterLink>Manifesto monokrom</FooterLink>
-            <FooterLink>Bahan asal italia</FooterLink>
-            <FooterLink>Siklus hidup sirkular</FooterLink>
-            <FooterLink>Keterlacakan asal usul</FooterLink>
-          </li>
-        </div>
-        <div className="flex-1">
-          <h2 className="mb-6 text-xs font-semibold tracking-widest uppercase">warta newsletter</h2>
+          <h2 className="mb-6 text-xs font-semibold tracking-widest uppercase">Promo & Diskon</h2>
           <p className="text-muted-foreground max-w-[35ch] leading-relaxed">
-            Dapatkan warta eksklusif undangan salon pribadi dan rilis buku gaya musiman sebelum
-            dipublikasikan luas.
+            Daftarkan emailmu untuk dapat voucher belanja, info diskon kilat, dan update koleksi
+            terbaru.
           </p>
           <form onSubmit={handleSubscribe} className="relative mt-4">
             <Input
@@ -65,7 +49,7 @@ const Footer: FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Masukkan email Anda"
-              className="rounded-none pr-18 text-xs placeholder:text-xs focus:outline-none focus-visible:border-input focus-visible:ring-0 focus-visible:outline-none"
+              className="focus-visible:border-input rounded-none pr-18 text-xs placeholder:text-xs focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
             />
             <Button
               className="absolute top-0 right-2 h-full text-xs font-medium hover:bg-transparent"
