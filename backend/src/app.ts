@@ -3,11 +3,12 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 
-import { auth } from './lib/auth.js';
+import { auth } from '@/lib/auth.js';
+import { errorHandler } from '@/middlewares/errorMiddleware.js';
+import productRoutes from '@/routes/productRoutes.js';
 
 const app = express();
 
-// security and middleware
 app.use(helmet());
 app.use(
   cors({
@@ -21,5 +22,9 @@ app.all('/api/auth/{*any}', toNodeHandler(auth));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use('/api/products', productRoutes);
+
+app.use(errorHandler);
 
 export default app;
