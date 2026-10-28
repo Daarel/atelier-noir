@@ -1,13 +1,9 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import { prisma } from '../src/lib/prisma.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-interface RawProductItem {
+interface SeedProduct {
   filename: string;
   name: string;
   categorySlug: string;
@@ -20,19 +16,39 @@ interface RawProductItem {
   }[];
 }
 
-function slugify(text: string): string {
-  return text
+const SEED_FILE_PATH = path.join(import.meta.dirname, 'products_seed.json');
+const CHUNK_SIZE = 50;
+const FALLBACK_CATEGORY_SLUG = 'dress';
+
+const CATEGORIES = [
+  { name: 'Atasan & Kaos', slug: 'atasan-kaos' },
+  { name: 'Jaket & Outer', slug: 'jaket-outer' },
+  { name: 'Dress', slug: 'dress' },
+];
+
+const slugify = (text: string) =>
+  text
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)+/g, '');
+
+/** Stok acak antara 10 - 39 */
+const randomStock = () => Math.floor(Math.random() * 30) + 10;
+
+/** Slug unik: nama-produk + kode file (misal: "silk-dress-00001-00") */
+function buildProductSlug({ name, filename }: SeedProduct) {
+  const fileId = filename
+    ? filename.replace(/\.[^/.]+$/, '')
+    : Math.random().toString(36).substring(7);
+
+  return `${slugify(name)}-${slugify(fileId)}`;
 }
 
-async function main() {
-  console.log('🚀 Memulai proses seeding ke database...');
-
-  // 0. Bersihkan seluruh isi tabel terkait produk & transaksi sebelumnya
+/** Hapus data produk & transaksi lama (child dihapus lebih dulu karena foreign key) */
+async function clearProductData() {
   console.log('🧹 Menghapus data produk dan transaksi terkait di database...');
+
   await prisma.$transaction([
     prisma.orderItem.deleteMany(),
     prisma.order.deleteMany(),
@@ -40,87 +56,96 @@ async function main() {
     prisma.productImage.deleteMany(),
     prisma.product.deleteMany(),
   ]);
+
   console.log('✅ Data lama berhasil dibersihkan.');
+}
 
-  // 1. Pastikan Kategori Utama Tersedia (Upsert)
-  const categoriesData = [
-    { name: 'Atasan & Kaos', slug: 'atasan-kaos' },
-    { name: 'Jaket & Outer', slug: 'jaket-outer' },
-    { name: 'Dress', slug: 'dress' },
-  ];
+/** Upsert kategori utama dan kembalikan map slug -> id */
+async function syncCategories() {
+  const categoryIdBySlug = new Map<string, string>();
 
-  const categoryMap = new Map<string, string>();
-
-  for (const cat of categoriesData) {
-    const createdCat = await prisma.category.upsert({
-      where: { slug: cat.slug },
-      update: { name: cat.name },
-      create: { name: cat.name, slug: cat.slug },
+  for (const { name, slug } of CATEGORIES) {
+    const category = await prisma.category.upsert({
+      where: { slug },
+      update: { name },
+      create: { name, slug },
     });
-    categoryMap.set(cat.slug, createdCat.id);
+    categoryIdBySlug.set(slug, category.id);
   }
+
   console.log('✅ Kategori berhasil disinkronkan.');
+  return categoryIdBySlug;
+}
 
-  // 2. Baca file products_seed.json
-  const jsonPath = path.join(__dirname, 'products_seed.json');
-  if (!fs.existsSync(jsonPath)) {
-    throw new Error(`Berkas tidak ditemukan: ${jsonPath}. Pastikan file ditaruh di backend/prisma/products_seed.json`);
+function loadSeedProducts(): SeedProduct[] {
+  if (!fs.existsSync(SEED_FILE_PATH)) {
+    throw new Error(
+      `Berkas tidak ditemukan: ${SEED_FILE_PATH}. Pastikan file ditaruh di backend/prisma/products_seed.json`,
+    );
   }
 
-  const rawProducts: RawProductItem[] = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-  console.log(`Membaca ${rawProducts.length} produk dari JSON...`);
+  const products: SeedProduct[] = JSON.parse(fs.readFileSync(SEED_FILE_PATH, 'utf-8'));
+  console.log(`Membaca ${products.length} produk dari JSON...`);
 
-  // 3. Masukkan ke Database secara bertahap (Chunking agar hemat koneksi DB)
-  const CHUNK_SIZE = 50;
-  let successCount = 0;
+  return products;
+}
 
-  for (let i = 0; i < rawProducts.length; i += CHUNK_SIZE) {
-    const chunk = rawProducts.slice(i, i + CHUNK_SIZE);
+function upsertProduct(item: SeedProduct, categoryId: string) {
+  const slug = buildProductSlug(item);
+
+  return prisma.product.upsert({
+    where: { slug },
+    update: {},
+    create: {
+      name: item.name,
+      slug,
+      description: item.description,
+      price: item.price,
+      stock: randomStock(),
+      isPublished: true,
+      categoryId,
+      images: {
+        create: item.images.map(({ url, publicId, isPrimary }) => ({
+          url,
+          publicId: publicId || null,
+          isPrimary,
+        })),
+      },
+    },
+  });
+}
+
+/** Simpan produk per chunk agar hemat koneksi DB */
+async function seedProducts(products: SeedProduct[], categoryIdBySlug: Map<string, string>) {
+  const fallbackCategoryId = categoryIdBySlug.get(FALLBACK_CATEGORY_SLUG)!;
+
+  for (let i = 0; i < products.length; i += CHUNK_SIZE) {
+    const chunk = products.slice(i, i + CHUNK_SIZE);
 
     await prisma.$transaction(
-      chunk.map((item) => {
-        // Ambil ID kategori yang sesuai (fallback ke dress jika tidak cocok)
-        const categoryId = categoryMap.get(item.categorySlug) || categoryMap.get('dress')!;
-
-        // Buat slug unik: nama-produk + kode file (misal: "silk-dress-00001-00")
-        const fileId = item.filename ? item.filename.replace(/\.[^/.]+$/, '') : Math.random().toString(36).substring(7);
-        const uniqueSlug = `${slugify(item.name)}-${slugify(fileId)}`;
-
-        return prisma.product.upsert({
-          where: { slug: uniqueSlug },
-          update: {},
-          create: {
-            name: item.name,
-            slug: uniqueSlug,
-            description: item.description,
-            price: item.price,
-            stock: Math.floor(Math.random() * 30) + 10, // Stok random 10 - 40
-            isPublished: true,
-            categoryId: categoryId,
-            images: {
-              create: item.images.map((img) => ({
-                url: img.url,
-                publicId: img.publicId || null,
-                isPrimary: img.isPrimary,
-              })),
-            },
-          },
-        });
-      })
+      chunk.map((item) =>
+        upsertProduct(item, categoryIdBySlug.get(item.categorySlug) ?? fallbackCategoryId),
+      ),
     );
 
-    successCount += chunk.length;
-    console.log(`⚡ Berhasil menyimpan ${successCount}/${rawProducts.length} produk...`);
+    console.log(`⚡ Berhasil menyimpan ${i + chunk.length}/${products.length} produk...`);
   }
 
-  console.log(`${successCount} produk dan gambar berhasil masuk ke database.`);
+  console.log(`${products.length} produk dan gambar berhasil masuk ke database.`);
+}
+
+async function main() {
+  console.log('🚀 Memulai proses seeding ke database...');
+
+  await clearProductData();
+  const categoryIdBySlug = await syncCategories();
+  const products = loadSeedProducts();
+  await seedProducts(products, categoryIdBySlug);
 }
 
 main()
-  .catch((e) => {
-    console.error('❌ Terjadi kesalahan saat seed:', e);
-    process.exit(1);
+  .catch((error) => {
+    console.error('❌ Terjadi kesalahan saat seed:', error);
+    process.exitCode = 1;
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .finally(() => prisma.$disconnect());
