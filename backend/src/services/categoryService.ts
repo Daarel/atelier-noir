@@ -49,7 +49,7 @@ class CategoryService {
       where: { id: categoryId },
     });
 
-    if (!existingCategory) throw new NotFoundError('Produk mungkin sudah dihapus');
+    if (!existingCategory) throw new NotFoundError('Kategori mungkin sudah dihapus');
 
     let newSlug: string | undefined;
     if (data.name && data.name !== existingCategory.name) {
@@ -79,11 +79,11 @@ class CategoryService {
 
     if (!existingCategory) throw new NotFoundError('Kategori mungkin sudah dihapus');
 
-    const removedProduct = await prisma.category.delete({
+    const removedCategory = await prisma.category.delete({
       where: { id: categoryId },
     });
 
-    return removedProduct;
+    return removedCategory;
   }
 }
 

@@ -7,7 +7,7 @@ const createProductSchema = z.object({
     .max(50, 'Panjang nama produk maksimal 50 karakter'),
   description: z
     .string()
-    .min(30, 'Panjang nama produk minimal 30 karakter')
+    .min(30, 'Panjang deskripsi produk minimal 30 karakter')
     .max(200, 'Panjang deskripsi produk maksimal 200 karakter'),
   price: z.coerce.number().positive('Harga harus lebih dari 0'),
   stock: z.coerce.number().int().min(0).optional(),

@@ -47,7 +47,7 @@ function buildProductSlug({ name, filename }: SeedProduct) {
 
 /** Hapus data produk & transaksi lama (child dihapus lebih dulu karena foreign key) */
 async function clearProductData() {
-  console.log('🧹 Menghapus data produk dan transaksi terkait di database...');
+  console.log('Menghapus data produk dan transaksi terkait di database...');
 
   await prisma.$transaction([
     prisma.orderItem.deleteMany(),
@@ -57,7 +57,7 @@ async function clearProductData() {
     prisma.product.deleteMany(),
   ]);
 
-  console.log('✅ Data lama berhasil dibersihkan.');
+  console.log('Data lama berhasil dibersihkan.');
 }
 
 /** Upsert kategori utama dan kembalikan map slug -> id */
@@ -73,7 +73,7 @@ async function syncCategories() {
     categoryIdBySlug.set(slug, category.id);
   }
 
-  console.log('✅ Kategori berhasil disinkronkan.');
+  console.log('Kategori berhasil disinkronkan.');
   return categoryIdBySlug;
 }
 
@@ -128,14 +128,14 @@ async function seedProducts(products: SeedProduct[], categoryIdBySlug: Map<strin
       ),
     );
 
-    console.log(`⚡ Berhasil menyimpan ${i + chunk.length}/${products.length} produk...`);
+    console.log(`Berhasil menyimpan ${i + chunk.length}/${products.length} produk...`);
   }
 
   console.log(`${products.length} produk dan gambar berhasil masuk ke database.`);
 }
 
 async function main() {
-  console.log('🚀 Memulai proses seeding ke database...');
+  console.log('Memulai proses seeding ke database...');
 
   await clearProductData();
   const categoryIdBySlug = await syncCategories();
@@ -145,7 +145,7 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error('❌ Terjadi kesalahan saat seed:', error);
+    console.error('Terjadi kesalahan saat seed:', error);
     process.exitCode = 1;
   })
   .finally(() => prisma.$disconnect());
