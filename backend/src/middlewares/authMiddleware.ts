@@ -4,7 +4,11 @@ import type { NextFunction, Request, Response } from 'express';
 import { UnauthorizedError } from '@/errors/error.js';
 import { auth } from '@/lib/auth.js';
 
-export const requireAuth = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+export const requireAuth = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> => {
   try {
     const session = await auth.api.getSession({
       headers: fromNodeHeaders(req.headers),

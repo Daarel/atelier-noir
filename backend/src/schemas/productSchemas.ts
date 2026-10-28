@@ -11,11 +11,10 @@ const createProductSchema = z.object({
     .max(200, 'Panjang deskripsi produk maksimal 200 karakter'),
   price: z.coerce.number().positive('Harga harus lebih dari 0'),
   stock: z.coerce.number().int().min(0).optional(),
-  isPublished: z
-    .preprocess(
-      (val) => (val === undefined ? undefined : val === 'true' || val === true),
-      z.boolean().optional(),
-    ),
+  isPublished: z.preprocess(
+    (val) => (val === undefined ? undefined : val === 'true' || val === true),
+    z.boolean().optional(),
+  ),
   categoryId: z.string().min(1, 'Kategori wajib dipilih'),
 });
 
