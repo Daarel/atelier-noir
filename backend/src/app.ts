@@ -5,6 +5,7 @@ import helmet from 'helmet';
 
 import { auth } from '@/lib/auth.js';
 import { errorHandler } from '@/middlewares/errorMiddleware.js';
+import categoryRoutes from '@/routes/categoryRoutes.js';
 import productRoutes from '@/routes/productRoutes.js';
 
 const app = express();
@@ -23,6 +24,7 @@ app.all('/api/auth/{*any}', toNodeHandler(auth));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/products', productRoutes);
 
 app.use(errorHandler);
