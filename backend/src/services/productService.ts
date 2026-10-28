@@ -15,7 +15,7 @@ import type {
 export type ProductSortBy = 'price-asc' | 'price-desc' | 'newest' | 'oldest' | 'relevant';
 
 class ProductService {
-  static async getAll(params: GetProductsQuery) {
+  static async findAllProducts(params: GetProductsQuery) {
     const { page, limit } = params;
     const skip = (page - 1) * limit;
 
@@ -99,7 +99,7 @@ class ProductService {
     };
   }
 
-  static async getDetail(productSlug: string) {
+  static async findProductBySlug(productSlug: string) {
     const product = await prisma.product.findUnique({
       where: {
         slug: productSlug,
@@ -119,7 +119,7 @@ class ProductService {
     return product;
   }
 
-  static async create(data: CreateProductInput, files?: ProductImageFiles) {
+  static async createProduct(data: CreateProductInput, files?: ProductImageFiles) {
     const slug = data.name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -134,7 +134,7 @@ class ProductService {
       ...(modelImg ? [{ ...modelImg, isPrimary: false }] : []),
     ];
 
-    return await prisma.product.create({
+    const addedProduct = await prisma.product.create({
       data: {
         ...data,
         slug,
@@ -142,9 +142,15 @@ class ProductService {
       },
       include: { images: true, category: true },
     });
+
+    return addedProduct;
   }
 
-  static async update(productId: string, data: UpdateProductInput, files?: ProductImageFiles) {
+  static async updateProductById(
+    productId: string,
+    data: UpdateProductInput,
+    files?: ProductImageFiles,
+  ) {
     const existingProduct = await prisma.product.findUnique({
       where: { id: productId },
       include: { images: true },
@@ -220,7 +226,7 @@ class ProductService {
     return updatedProduct;
   }
 
-  static async remove(productId: string) {
+  static async removeProductById(productId: string) {
     const existingProduct = await prisma.product.findUnique({
       where: { id: productId },
     });

@@ -10,15 +10,15 @@ import ProductService from '@/services/productService.js';
 
 class ProductController {
   /**
-   * @desc Mengambil semua data product dengan pagination
-   * @route /api/v1/productRoutes/
+   * @desc Mengambil semua produk dengan pagination
+   * @route /api/v1/products/
    * @acc Public
    */
-  static async getAll(req: Request, res: Response, next: NextFunction) {
+  static async findAll(req: Request, res: Response, next: NextFunction) {
     try {
       const query = getProductsQuerySchema.parse(req.query);
 
-      const result = await ProductService.getAll(query);
+      const result = await ProductService.findAllProducts(query);
 
       return res.status(200).json({
         success: true,
@@ -30,8 +30,8 @@ class ProductController {
   }
 
   /**
-   * @desc Menambahkan product
-   * @route /api/v1/productRoutes/
+   * @desc Menambahkan produk
+   * @route /api/v1/products/
    * @acc Private
    */
   static async create(req: Request, res: Response, next: NextFunction) {
@@ -39,11 +39,11 @@ class ProductController {
       const data = createProductSchema.parse(req.body);
       const files = req.files as ProductImageFiles | undefined;
 
-      const newProduct = await ProductService.create(data, files);
+      const newProduct = await ProductService.createProduct(data, files);
 
       return res.status(201).json({
         success: true,
-        message: 'Product baru berhasil ditambahkan',
+        message: 'Produk baru berhasil ditambahkan',
         data: newProduct,
       });
     } catch (err) {
@@ -52,15 +52,15 @@ class ProductController {
   }
 
   /**
-   * @desc Mengambil detail product berdasarkan slug
-   * @route /api/v1/productRoutes/:slug
+   * @desc Mengambil detail produk berdasarkan slug
+   * @route /api/v1/products/:slug
    * @acc Public
    */
-  static async getDetail(req: Request<{ slug: string }>, res: Response, next: NextFunction) {
+  static async findDetail(req: Request<{ slug: string }>, res: Response, next: NextFunction) {
     try {
       const { slug } = req.params;
 
-      const product = await ProductService.getDetail(slug);
+      const product = await ProductService.findProductBySlug(slug);
 
       return res.status(200).json({
         success: true,
@@ -72,8 +72,8 @@ class ProductController {
   }
 
   /**
-   * @desc Mengubah data product berdasarkan id
-   * @route /api/v1/productRoutes/:id
+   * @desc Mengubah data produk berdasarkan id
+   * @route /api/v1/products/:id
    * @acc Private
    */
   static async update(req: Request<{ id: string }>, res: Response, next: NextFunction) {
@@ -82,11 +82,11 @@ class ProductController {
       const data = updateProductSchema.parse(req.body);
       const files = req.files as ProductImageFiles | undefined;
 
-      const updatedProduct = await ProductService.update(id, data, files);
+      const updatedProduct = await ProductService.updateProductById(id, data, files);
 
       return res.status(200).json({
         success: true,
-        message: 'Product berhasil di-update',
+        message: 'Produk berhasil diubah',
         data: updatedProduct,
       });
     } catch (err) {
@@ -95,15 +95,15 @@ class ProductController {
   }
 
   /**
-   * @desc Menghapus product berdasarkan id
-   * @route /api/v1/productRoutes/:id
+   * @desc Menghapus produk berdasarkan id
+   * @route /api/v1/products/:id
    * @acc Private
    */
   static async remove(req: Request<{ id: string }>, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
 
-      await ProductService.remove(id);
+      await ProductService.removeProductById(id);
 
       return res.status(200).json({
         success: true,

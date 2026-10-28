@@ -23,7 +23,7 @@ app.all('/api/auth/{*any}', toNodeHandler(auth));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/api/products', productRoutes);
+app.use('/api/v1/products', productRoutes);
 
 app.use(errorHandler);
 
