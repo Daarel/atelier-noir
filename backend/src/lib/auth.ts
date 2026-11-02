@@ -66,4 +66,13 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: ['http://localhost:5173'],
+  user: {
+    additionalFields: {
+      role: {
+        type: 'string',
+        defaultValue: 'customer',
+        input: false,
+      },
+    },
+  },
 });

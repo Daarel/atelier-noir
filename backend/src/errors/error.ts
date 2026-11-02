@@ -25,6 +25,12 @@ export class NotFoundError extends AppError {
 
 export class BadRequestError extends AppError {
   constructor(message = 'Bad Request') {
-    super(message, 500);
+    super(message, 400);
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message = 'Forbidden') {
+    super(message, 403);
   }
 }
