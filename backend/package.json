@@ -13,7 +13,8 @@
     "prisma:studio": "prisma studio",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "keywords": [],
   "author": "",

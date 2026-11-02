@@ -1,5 +1,6 @@
 {
   "name": "atelier-noir-root",
+  "version": "1.0.0",
   "private": true,
   "workspaces": [
     "frontend",
@@ -10,9 +11,11 @@
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:backend": "npm run dev --workspace=backend",
     "build": "npm run build --workspaces",
-    "lint": "npm run lint --workspaces"
+    "lint": "npm run lint --workspaces",
+    "db:seed": "npm run db:seed --workspace=backend"
   },
   "devDependencies": {
+    "@types/multer": "^2.3.0",
     "concurrently": "^9.1.2"
   }
 }

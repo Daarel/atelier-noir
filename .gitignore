@@ -1,2 +1,4 @@
 node_modules/
 dist/
+.vscode
+analisis_endpoint_atelier_noir.md

@@ -46,5 +46,5 @@ export interface Order {
 export interface CheckoutFormData {
   addressId: string;
   notes?: string;
-  paymentMethod: 'bank_transfer' | 'e_wallet' | 'cod';
+  paymentMethod: 'bank_transfer' | 'qris' | 'e_wallet';
 }
