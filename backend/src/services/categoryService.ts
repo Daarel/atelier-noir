@@ -1,4 +1,4 @@
-import { NotFoundError } from '@/errors/error.js';
+import { BadRequestError, NotFoundError } from '@/errors/error.js';
 import { prisma } from '@/lib/prisma.js';
 import type { CreateCategoryInput, UpdateCategoryInput } from '@/schemas/categorySchemas.js';
 
@@ -75,9 +75,18 @@ class CategoryService {
   static async removeCategoryById(categoryId: string) {
     const existingCategory = await prisma.category.findUnique({
       where: { id: categoryId },
+      include: {
+        _count: {
+          select: { products: true },
+        },
+      },
     });
 
     if (!existingCategory) throw new NotFoundError('Kategori mungkin sudah dihapus');
+
+    if (existingCategory._count.products > 0) {
+      throw new BadRequestError('Kategori tidak bisa dihapus karena masih memiliki produk terkait');
+    }
 
     const removedCategory = await prisma.category.delete({
       where: { id: categoryId },

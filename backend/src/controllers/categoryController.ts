@@ -5,7 +5,7 @@ import CategoryService from '@/services/categoryService.js';
 
 class CategoryController {
   /**
-   * @desc Mengambil semua data category
+   * @desc Mengambil semua data kategori
    * @route /api/v1/categories/
    * @acc Public
    */
@@ -23,7 +23,7 @@ class CategoryController {
   }
 
   /**
-   * @desc Menambahkan Kategori
+   * @desc Menambahkan kategori
    * @route /api/v1/categories/
    * @acc Private
    */

@@ -1,5 +1,5 @@
 import cloudinary, { uploadToCloudinary } from '@/config/cloudinary.js';
-import { NotFoundError } from '@/errors/error.js';
+import { BadRequestError, NotFoundError } from '@/errors/error.js';
 import type {
   ProductOrderByWithRelationInput,
   ProductWhereInput,
@@ -114,7 +114,7 @@ class ProductService {
       },
     });
 
-    if (!product) throw new NotFoundError('Produk tidak ditemukan');
+    if (!product || !product.isPublished) throw new NotFoundError('Produk tidak ditemukan');
 
     return product;
   }
@@ -130,8 +130,8 @@ class ProductService {
       files?.model?.[0] ? uploadToCloudinary(files.model[0].buffer, 'atelier-noir/model') : null,
     ]);
     const images = [
-      ...(clothImg ? [{ ...clothImg, isPrimary: true }] : []),
-      ...(modelImg ? [{ ...modelImg, isPrimary: false }] : []),
+      ...(modelImg ? [{ ...modelImg, isPrimary: true }] : []),
+      ...(clothImg ? [{ ...clothImg, isPrimary: false }] : []),
     ];
 
     const addedProduct = await prisma.product.create({
@@ -170,7 +170,7 @@ class ProductService {
     const imageIdsToDelete: string[] = [];
 
     if (files?.cloth?.[0]) {
-      const oldClothImg = existingProduct.images.find((img) => img.isPrimary);
+      const oldClothImg = existingProduct.images.find((img) => !img.isPrimary);
       if (oldClothImg) {
         if (oldClothImg.publicId) {
           await cloudinary.uploader.destroy(oldClothImg.publicId);
@@ -182,12 +182,12 @@ class ProductService {
       imagesToCreate.push({
         url: uploadedCloth.url,
         publicId: uploadedCloth.publicId,
-        isPrimary: true,
+        isPrimary: false,
       });
     }
 
     if (files?.model?.[0]) {
-      const oldModelImg = existingProduct.images.find((img) => !img.isPrimary);
+      const oldModelImg = existingProduct.images.find((img) => img.isPrimary);
       if (oldModelImg) {
         if (oldModelImg.publicId) {
           await cloudinary.uploader.destroy(oldModelImg.publicId);
@@ -199,7 +199,7 @@ class ProductService {
       imagesToCreate.push({
         url: uploadedModel.url,
         publicId: uploadedModel.publicId,
-        isPrimary: false,
+        isPrimary: true,
       });
     }
 
@@ -229,15 +229,41 @@ class ProductService {
   static async removeProductById(productId: string) {
     const existingProduct = await prisma.product.findUnique({
       where: { id: productId },
+      include: {
+        images: true,
+        _count: {
+          select: { orderItems: true },
+        },
+      },
     });
 
     if (!existingProduct) throw new NotFoundError('Produk mungkin sudah dihapus');
 
-    const removeProduct = await prisma.product.delete({
+    if (existingProduct._count.orderItems > 0) {
+      throw new BadRequestError(
+        'Produk tidak dapat dihapus karena terdapat di riwayat pesanan. Ubah status produk menjadi draft (isPublished: false) sebagai gantinya.',
+      );
+    }
+
+    await prisma.cartItem.deleteMany({
+      where: { productId },
+    });
+
+    for (const img of existingProduct.images) {
+      if (img.publicId) {
+        try {
+          await cloudinary.uploader.destroy(img.publicId);
+        } catch (error) {
+          console.error(`Gagal menghapus gambar Cloudinary ${img.publicId}:`, error);
+        }
+      }
+    }
+
+    const removedProduct = await prisma.product.delete({
       where: { id: productId },
     });
 
-    return removeProduct;
+    return removedProduct;
   }
 }
 

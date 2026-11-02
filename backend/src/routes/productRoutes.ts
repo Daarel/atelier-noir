@@ -1,7 +1,7 @@
 import express from 'express';
 
 import ProductController from '@/controllers/productController.js';
-import { requireAuth } from '@/middlewares/authMiddleware.js';
+import { requireAdmin, requireAuth } from '@/middlewares/authMiddleware.js';
 import { uploadProductImages } from '@/middlewares/uploadMiddleware.js';
 
 const router = express.Router();
@@ -9,11 +9,11 @@ const router = express.Router();
 router
   .route('/')
   .get(ProductController.findAll)
-  .post(requireAuth, uploadProductImages, ProductController.create);
+  .post(requireAuth, requireAdmin, uploadProductImages, ProductController.create);
 router.route('/:slug').get(ProductController.findDetail);
 router
   .route('/:id')
-  .patch(requireAuth, uploadProductImages, ProductController.update)
-  .delete(requireAuth, ProductController.remove);
+  .patch(requireAuth, requireAdmin, uploadProductImages, ProductController.update)
+  .delete(requireAuth, requireAdmin, ProductController.remove);
 
 export default router;
