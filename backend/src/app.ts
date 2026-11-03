@@ -10,7 +10,9 @@ import adminRoutes from '@/routes/adminRoutes.js';
 import cartRoutes from '@/routes/cartRoutes.js';
 import categoryRoutes from '@/routes/categoryRoutes.js';
 import orderRoutes from '@/routes/orderRoutes.js';
+import paymentRoutes from '@/routes/paymentRoutes.js';
 import productRoutes from '@/routes/productRoutes.js';
+import tryOnRoutes from '@/routes/tryOnRoutes.js';
 import wishlistRoutes from '@/routes/wishlistRoutes.js';
 
 const app = express();
@@ -36,6 +38,9 @@ app.use('/api/v1/cart', cartRoutes);
 app.use('/api/v1/wishlist', wishlistRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/payments', paymentRoutes);
+app.use('/api/v1/payment', paymentRoutes);
+app.use('/api/v1/try-on', tryOnRoutes);
 
 app.use(errorHandler);
 
