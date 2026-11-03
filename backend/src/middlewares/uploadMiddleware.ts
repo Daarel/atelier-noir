@@ -27,3 +27,5 @@ export const uploadProductImages = upload.fields([
   { name: 'cloth', maxCount: 1 },
   { name: 'model', maxCount: 1 },
 ]);
+
+export const uploadTryOnImage = upload.single('personImage');

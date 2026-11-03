@@ -7,7 +7,7 @@ cloudinary.config({
   secure: true,
 });
 
-export type CloudinaryFolder = 'atelier-noir/cloth' | 'atelier-noir/model';
+export type CloudinaryFolder = 'atelier-noir/cloth' | 'atelier-noir/model' | 'atelier-noir/try-on';
 
 export const uploadToCloudinary = (
   fileBuffer: Buffer,
