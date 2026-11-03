@@ -9,23 +9,15 @@ import type {
 import { prisma } from '@/lib/prisma.js';
 import type { GetAdminOrdersQuery, GetAdminProductsQuery } from '@/schemas/adminSchema.js';
 
-/**
- * State Machine Transisi Status Pesanan:
- * Mencegah perubahan status tidak logis (misalnya pesanan yang sudah DELIVERED
- * tiba-tiba dikembalikan ke PENDING atau CANCELLED tanpa proses retur barang).
- */
+// Aturan transisi status pesanan untuk menjaga konsistensi state machine
 const ALLOWED_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   PENDING: ['PROCESSING', 'CANCELLED'],
   PROCESSING: ['DELIVERED', 'CANCELLED'],
-  DELIVERED: [], // Terminal state: pesanan sudah diterima pelanggan, status terkunci
-  CANCELLED: ['PENDING', 'PROCESSING'], // Bisa diaktifkan kembali jika pembatalan keliru
+  DELIVERED: [],
+  CANCELLED: ['PENDING', 'PROCESSING'],
 };
 
-/**
- * Objek relasi Prisma yang diambil untuk setiap pesanan di modul admin.
- * Mengutamakan gambar pakaian datar (`isPrimary: false`), namun jika produk hanya
- * memiliki gambar model, query tetap mengambil gambar yang tersedia (tidak kosong).
- */
+// Struktur relasi lengkap data pesanan untuk kebutuhan panel admin
 const adminOrderInclude = {
   user: {
     select: {
@@ -43,8 +35,6 @@ const adminOrderInclude = {
           id: true,
           name: true,
           slug: true,
-          // Mengurutkan isPrimary: 'asc' (false dulu = cloth, lalu true = model).
-          // Ini mencegah array gambar kosong jika produk hanya punya foto model.
           images: {
             orderBy: { isPrimary: 'asc' },
             select: { url: true, isPrimary: true },
@@ -59,13 +49,7 @@ const adminOrderInclude = {
 type AdminOrderPayload = Prisma.OrderGetPayload<{ include: typeof adminOrderInclude }>;
 
 class AdminService {
-  /**
-   * Helper serialisasi:
-   * 1. Mengubah Decimal Prisma menjadi number JavaScript.
-   * 2. Fallback Snapshot Alamat: Jika customer menghapus alamat dari buku alamatnya,
-   *    backend otomatis merekonstruksi objek alamat dari field snapshot `shipping...`
-   *    agar halaman detail pesanan admin tidak rusak/null.
-   */
+  // Serialisasi data pesanan dan fallback ke snapshot alamat jika data master dihapus
   private static serializeOrder(order: AdminOrderPayload) {
     const address =
       order.address ??
@@ -95,13 +79,9 @@ class AdminService {
     };
   }
 
-  /**
-   * Mengambil statistik ringkas dashboard admin:
-   * Menggunakan `Promise.all` ketimbang `$transaction` untuk operasi read-only agregasi.
-   * Ini memanfaatkan connection pool PostgreSQL dengan optimal dan mencegah
-   * warning `DeprecationWarning: Calling client.query() concurrently` pada driver pg.
-   */
+  // Agregasi statistik menyeluruh untuk dashboard manajemen admin
   static async getDashboardStats() {
+    // Jalankan seluruh query agregasi secara paralel tanpa membebani connection pool tunggal
     const [
       revenueAggregate,
       totalOrders,
@@ -111,7 +91,7 @@ class AdminService {
       totalCustomers,
       lowStockProducts,
     ] = await Promise.all([
-      // 1. Akumulasi omset dari pesanan yang sah/sudah dibayar (PROCESSING & DELIVERED)
+      // Hitung total pendapatan dari pesanan yang sukses dibayar atau telah terkirim
       prisma.order.aggregate({
         _sum: { totalAmount: true },
         where: {
@@ -119,30 +99,29 @@ class AdminService {
         },
       }),
 
-      // 2. Jumlah total seluruh pesanan
+      // Hitung total keseluruhan pesanan yang masuk
       prisma.order.count(),
 
-      // 3. Rincian jumlah pesanan dikelompokkan berdasarkan status
+      // Hitung distribusi jumlah pesanan per status saat ini
       prisma.order.groupBy({
         by: ['status'],
         _count: { _all: true },
       }),
 
-      // 4. Jumlah seluruh produk
+      // Hitung total keseluruhan produk di katalog
       prisma.product.count(),
 
-      // 5. Jumlah produk aktif di etalase
+      // Hitung produk yang sedang tayang aktif untuk pembeli
       prisma.product.count({
         where: { isPublished: true },
       }),
 
-      // 6. Jumlah pelanggan aktif terdaftar
+      // Hitung jumlah akun pelanggan terdaftar
       prisma.user.count({
         where: { role: 'customer' },
       }),
 
-      // 7. Ambil produk AKTIF (isPublished: true) yang stoknya menipis (<= 5).
-      // Filter isPublished penting agar produk draft usang tidak mencemari alert restock.
+      // Ambil daftar produk dengan stok menipis untuk peringatan inventaris
       prisma.product.findMany({
         where: {
           isPublished: true,
@@ -168,7 +147,7 @@ class AdminService {
       }),
     ]);
 
-    // Format groupBy menjadi objek terstruktur yang stabil untuk frontend chart/card
+    // Format sebaran pesanan per status dengan nilai dasar nol
     const ordersByStatus: Record<OrderStatus, number> = {
       PENDING: 0,
       PROCESSING: 0,
@@ -204,25 +183,24 @@ class AdminService {
     };
   }
 
-  /**
-   * Mengambil data produk untuk tabel admin (termasuk produk draft `isPublished: false`).
-   * Sanitasi input query search dilakukan untuk mencegah full table scan yang tidak perlu.
-   */
+  // Mengambil daftar seluruh produk katalog dengan filter dan paginasi untuk admin
   static async findAllProducts(params: GetAdminProductsQuery) {
     const { page, limit, search, category, isPublished, sortBy } = params;
     const skip = (page - 1) * limit;
 
     const where: ProductWhereInput = {};
 
+    // Filter status publikasi jika disediakan pada parameter
     if (typeof isPublished === 'boolean') {
       where.isPublished = isPublished;
     }
 
+    // Filter kategori berdasarkan slug jika dipilih
     if (category) {
       where.category = { slug: category };
     }
 
-    // Hanya lakukan pencarian teks jika query string tidak kosong setelah di-trim
+    // Filter pencarian teks pada nama atau deskripsi produk
     const trimmedSearch = search?.trim();
     if (trimmedSearch) {
       where.OR = [
@@ -231,6 +209,7 @@ class AdminService {
       ];
     }
 
+    // Tentukan urutan data berdasarkan kriteria sortBy
     let orderBy: ProductOrderByWithRelationInput;
     switch (sortBy) {
       case 'price-asc':
@@ -254,6 +233,7 @@ class AdminService {
         break;
     }
 
+    // Ambil total data dan daftar produk dalam satu transaksi baca
     const [totalItems, products] = await prisma.$transaction([
       prisma.product.count({ where }),
       prisma.product.findMany({
@@ -290,20 +270,19 @@ class AdminService {
     };
   }
 
-  /**
-   * Mengambil seluruh riwayat pesanan semua pelanggan.
-   * Pencarian fleksibel mencakup nomor pesanan, nama customer, atau email customer.
-   */
+  // Mengambil seluruh pesanan masuk dengan filter status dan pencarian kata kunci
   static async findAllOrders(params: GetAdminOrdersQuery) {
     const { page, limit, status, search } = params;
     const skip = (page - 1) * limit;
 
     const where: OrderWhereInput = {};
 
+    // Filter pesanan berdasarkan status tertentu
     if (status) {
       where.status = status;
     }
 
+    // Filter pencarian pada nomor pesanan atau identitas pengguna
     const trimmedSearch = search?.trim();
     if (trimmedSearch) {
       where.OR = [
@@ -313,6 +292,7 @@ class AdminService {
       ];
     }
 
+    // Ambil total data dan rekaman pesanan yang terurut dari terbaru
     const [totalItems, orders] = await prisma.$transaction([
       prisma.order.count({ where }),
       prisma.order.findMany({
@@ -339,17 +319,11 @@ class AdminService {
     };
   }
 
-  /**
-   * Mengubah status pesanan dengan proteksi integritas tingkat tinggi:
-   * 1. Validasi State Machine (Mencegah loncatan status ilegal seperti DELIVERED -> PENDING).
-   * 2. Atomic Optimistic Locking (Mencegah duplikasi stok akibat double-request simultan).
-   * 3. Atomic Stock Decrement (Mencegah stok minus saat pesanan batal diaktifkan kembali).
-   * 4. Sinkronisasi status pembayaran `paidAt`.
-   */
+  // Memperbarui status pesanan dengan validasi transisi dan sinkronisasi stok otomatis
   static async updateOrderStatus(orderId: string, newStatus: OrderStatus) {
     const updatedOrder = await prisma.$transaction(
       async (tx) => {
-        // Cari order berdasarkan ID atau orderNumber
+        // Cari data pesanan berdasarkan ID primer atau nomor faktur pesanan
         const order = await tx.order.findFirst({
           where: {
             OR: [{ id: orderId }, { orderNumber: orderId }],
@@ -371,7 +345,7 @@ class AdminService {
 
         const previousStatus = order.status;
 
-        // Jika status tidak berubah, langsung kembalikan data terkini
+        // Jika status yang dituju sama persis maka tidak perlu melakukan perubahan data
         if (previousStatus === newStatus) {
           return tx.order.findUniqueOrThrow({
             where: { id: order.id },
@@ -379,7 +353,7 @@ class AdminService {
           });
         }
 
-        // 1. Validasi State Machine
+        // Validasi alur transisi status sesuai aturan bisnis yang berlaku
         const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[previousStatus];
         if (!allowedTransitions.includes(newStatus)) {
           throw new BadRequestError(
@@ -387,7 +361,7 @@ class AdminService {
           );
         }
 
-        // 2. Transisi Menuju CANCELLED: Kembalikan stok barang ke inventaris
+        // Kembalikan kuantitas stok ke inventaris produk jika pesanan dibatalkan
         if (newStatus === 'CANCELLED' && previousStatus !== 'CANCELLED') {
           for (const item of order.items) {
             await tx.product.update({
@@ -397,9 +371,7 @@ class AdminService {
           }
         }
 
-        // 3. Transisi Dari CANCELLED Kembali ke Aktif: Kurangi stok secara ATOMIK
-        // Menggunakan updateMany bersyarat `stock >= quantity` untuk mencegah stok menjadi minus
-        // jika barang tersebut sudah terlanjur dibeli orang lain saat pesanan dibatalkan.
+        // Kurangi kembali stok jika pesanan yang sebelumnya batal diaktifkan kembali
         if (previousStatus === 'CANCELLED' && newStatus !== 'CANCELLED') {
           for (const item of order.items) {
             const result = await tx.product.updateMany({
@@ -410,6 +382,7 @@ class AdminService {
               data: { stock: { decrement: item.quantity } },
             });
 
+            // Batalkan perubahan jika stok produk sudah tidak mencukupi untuk dipulihkan
             if (result.count === 0) {
               throw new BadRequestError(
                 `Gagal mengaktifkan pesanan: Stok "${item.product.name}" tidak mencukupi untuk memenuhi pesanan ini`,
@@ -418,13 +391,12 @@ class AdminService {
           }
         }
 
-        // 4. Pengaturan otomatis timestamp `paidAt`
+        // Atur penanda waktu bayar jika status beralih ke proses atau terkirim
         const shouldSetPaidAt =
           (newStatus === 'PROCESSING' || newStatus === 'DELIVERED') && !order.paidAt;
         const shouldResetPaidAt = newStatus === 'PENDING';
 
-        // 5. Optimistic Locking: Hanya update jika status di database masih `previousStatus`.
-        // Jika ada request lain yang mendahului mengubah status ini, count akan 0 dan transaksi rollback.
+        // Lakukan pembaruan status pesanan atomik dengan optimistic concurrency check
         const updateResult = await tx.order.updateMany({
           where: {
             id: order.id,
@@ -437,6 +409,7 @@ class AdminService {
           },
         });
 
+        // Pastikan tidak ada benturan pembaruan oleh sesi admin lain pada detik yang sama
         if (updateResult.count === 0) {
           throw new BadRequestError(
             'Status pesanan telah diperbarui oleh proses lain, silakan muat ulang halaman',

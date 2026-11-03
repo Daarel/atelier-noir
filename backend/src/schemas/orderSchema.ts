@@ -2,12 +2,6 @@ import { z } from 'zod';
 
 import { OrderStatus } from '@/generated/prisma/enums.js';
 
-/**
- * Tiga metode pembayaran resmi yang didukung Atelier Noir (via Midtrans):
- * 1. bank_transfer: Virtual Account (BCA, Mandiri Bill, BNI, BRI, Permata)
- * 2. qris: Scan QRIS serbaguna (BCA Mobile, Livin, GoPay, OVO, Dana, dll)
- * 3. e_wallet: E-Wallet direct (GoPay, ShopeePay)
- */
 const PAYMENT_METHODS = ['bank_transfer', 'qris', 'e_wallet'] as const;
 
 const createOrderSchema = z.object({

@@ -6,29 +6,16 @@ import { prisma } from '@/lib/prisma.js';
 import type { TryOnInput } from '@/schemas/tryOnSchema.js';
 
 class TryOnService {
-  /**
-   * Menjalankan AI Virtual Try-On menggunakan model IDM-VTON di Hugging Face Spaces.
-   *
-   * Tahapan proses:
-   * 1. Validasi keberadaan produk dan gambar pakaian (cloth image dengan isPrimary: false).
-   * 2. Validasi file foto pengguna (personImage) yang dikirimkan via multipart/form-data.
-   * 3. Menyiapkan input biner: foto pengguna diubah menjadi Blob, dan gambar produk
-   *    diunduh dari Cloudinary menjadi Blob agar siap diunggah langsung ke Gradio server.
-   * 4. Inisialisasi koneksi @gradio/client ke Space 'yisol/IDM-VTON' (dengan HF_TOKEN jika tersedia).
-   * 5. Eksekusi inferensi diffusion pipeline (/tryon) dengan auto-masking aktif.
-   * 6. Mengunduh hasil gambar sementara dari Gradio dan mengunggahnya ke Cloudinary folder 'atelier-noir/try-on'
-   *    agar hasil try-on tersimpan permanen dan memiliki URL CDN berkecepatan tinggi.
-   * 7. Mengembalikan metadata produk dan URL gambar hasil try-on ke klien.
-   */
+  // Eksekusi proses virtual try-on busana menggunakan model kecerdasan buatan
   static async generateTryOn(input: TryOnInput, file?: Express.Multer.File) {
     const { productId, garmentDescription } = input;
 
-    // 1. Validasi foto pengguna
+    // Verifikasi keberadaan file foto model atau diri pengguna
     if (!file || !file.buffer) {
       throw new BadRequestError('Foto model atau diri sendiri (personImage) wajib diunggah');
     }
 
-    // 2. Ambil data produk dan relasi gambar dari database
+    // Ambil data produk beserta relasi gambar dari basis data
     const product = await prisma.product.findUnique({
       where: { id: productId },
       include: {
@@ -47,20 +34,19 @@ class TryOnService {
       throw new NotFoundError('Produk tidak ditemukan');
     }
 
-    // Prioritaskan gambar pakaian (isPrimary: false) untuk virtual try-on,
-    // jika tidak ada gunakan gambar pertama sebagai fallback
+    // Pilih gambar pakaian khusus try-on atau gunakan gambar pertama sebagai alternatif
     const clothImage = product.images.find((img) => !img.isPrimary) || product.images[0];
 
     if (!clothImage) {
       throw new BadRequestError('Produk ini belum memiliki gambar pakaian untuk proses try-on');
     }
 
-    // 3. Konversi buffer foto pengguna menjadi Web-standard Blob
+    // Konversi buffer foto pengguna menjadi tipe blob biner standar web
     const personBlob = new Blob([new Uint8Array(file.buffer)], {
       type: file.mimetype,
     });
 
-    // Unduh gambar pakaian dari Cloudinary agar menjadi Blob biner terverifikasi
+    // Unduh gambar pakaian dari cloud storage untuk disiapkan sebagai input model
     let clothBlob: Blob;
     try {
       const clothResponse = await fetch(clothImage.url);
@@ -73,7 +59,7 @@ class TryOnService {
       throw new BadRequestError('Gagal memuat gambar pakaian produk untuk proses try-on');
     }
 
-    // 4. Inisialisasi Gradio Client menuju space yisol/IDM-VTON
+    // Inisialisasi koneksi klien gradio menuju ruang kerja idm-vton
     const hfToken = process.env.HF_TOKEN;
     let client: Client;
 
@@ -89,7 +75,7 @@ class TryOnService {
       );
     }
 
-    // 5. Jalankan inferensi AI IDM-VTON
+    // Jalankan inferensi diffusion model try-on dengan auto-masking aktif
     let result: { data: unknown };
     try {
       result = (await client.predict('/tryon', {
@@ -115,7 +101,7 @@ class TryOnService {
       );
     }
 
-    // 6. Ekstraksi URL hasil dari respons Gradio
+    // Ekstraksi alamat url gambar hasil inferensi dari respons gradio
     const outputItem = Array.isArray(result?.data) ? result.data[0] : result?.data;
     const generatedUrl =
       typeof outputItem === 'string' ? outputItem : (outputItem as { url?: string })?.url;
@@ -124,7 +110,7 @@ class TryOnService {
       throw new ServiceUnavailableError('Server AI tidak mengembalikan gambar hasil yang valid.');
     }
 
-    // 7. Unduh hasil sementara dari server Gradio untuk disimpan ke Cloudinary
+    // Unduh gambar hasil sementara dari server gradio dan simpan permanen ke cloudinary
     let cloudinaryResult: { url: string; publicId: string };
     try {
       const generatedResponse = await fetch(generatedUrl);
@@ -142,7 +128,7 @@ class TryOnService {
       );
     }
 
-    // 8. Kembalikan data lengkap untuk frontend
+    // Kembalikan tautan gambar permanen beserta ringkasan metadata produk
     return {
       resultImageUrl: cloudinaryResult.url,
       resultPublicId: cloudinaryResult.publicId,
