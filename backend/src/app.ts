@@ -5,6 +5,7 @@ import helmet from 'helmet';
 
 import { auth } from '@/lib/auth.js';
 import { errorHandler } from '@/middlewares/errorMiddleware.js';
+import { generalLimiter } from '@/middlewares/rateLimitMiddleware.js';
 import addressRoutes from '@/routes/addressRoutes.js';
 import adminRoutes from '@/routes/adminRoutes.js';
 import cartRoutes from '@/routes/cartRoutes.js';
@@ -30,6 +31,8 @@ app.all('/api/auth/{*any}', toNodeHandler(auth));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use('/api/v1', generalLimiter);
 
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/products', productRoutes);
